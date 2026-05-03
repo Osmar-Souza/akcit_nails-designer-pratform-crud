@@ -1,0 +1,41 @@
+<div *ngIf="!isAuthenticated">
+  <app-login-screen (onLogin)="handleLogin($event)"></app-login-screen>
+</div>
+
+<div *ngIf="isAuthenticated">
+  <app-layout
+    [activeTab]="activeTab"
+    (activeTabChange)="activeTab = $event"
+    (openNewBooking)="onOpenNewBooking()"
+    [isAdmin]="isAdmin"
+    (logout)="handleLogout()">
+    
+    <div *ngIf="activeTab === 'dashboard' && isAdmin">
+      <app-dashboard 
+        [appointments]="appointmentService.appointments" 
+        [services]="AVAILABLE_SERVICES">
+      </app-dashboard>
+    </div>
+
+    <div *ngIf="activeTab === 'schedule'">
+      <app-appointment-list 
+        [appointments]="appointmentService.appointments" 
+        [services]="AVAILABLE_SERVICES"
+        (updateStatus)="handleUpdateStatus($event.id, $event.status)"
+        [isAdmin]="isAdmin">
+      </app-appointment-list>
+    </div>
+
+    <div *ngIf="activeTab === 'ai-assistant'">
+      <app-ai-assistant></app-ai-assistant>
+    </div>
+
+    <app-new-booking-modal 
+      [isOpen]="isModalOpen"
+      (close)="onCloseModal()"
+      (save)="handleNewBooking($event.clientName, $event.serviceId, $event.date)"
+      [services]="AVAILABLE_SERVICES"
+      [existingAppointments]="appointmentService.appointments">
+    </app-new-booking-modal>
+  </app-layout>
+</div>
