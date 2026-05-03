@@ -1,0 +1,53 @@
+<div *ngIf="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+    <h2 class="text-xl font-bold text-gray-800 mb-4">Novo Agendamento</h2>
+    
+    <form (ngSubmit)="onSave()" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Nome da Cliente</label>
+        <input
+          type="text"
+          [(ngModel)]="clientName"
+          name="clientName"
+          required
+          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500">
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Serviço</label>
+        <select
+          [(ngModel)]="serviceId"
+          name="serviceId"
+          required
+          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500">
+          <option value="">Selecione um serviço</option>
+          <option *ngFor="let service of services" [value]="service.id">{{ service.name }} - R$ {{ service.price.toFixed(2) }}</option>
+        </select>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Data e Hora</label>
+        <input
+          type="datetime-local"
+          [(ngModel)]="date"
+          name="date"
+          required
+          class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500">
+      </div>
+      
+      <div class="flex gap-3">
+        <button
+          type="button"
+          (click)="closeModal()"
+          class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-lg font-medium transition-colors">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="flex-1 bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-lg font-medium transition-colors">
+          Agendar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
