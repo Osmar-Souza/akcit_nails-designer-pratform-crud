@@ -1,0 +1,51 @@
+<div class="space-y-4">
+  <h2 class="text-lg font-bold text-gray-800 mb-4">Agenda</h2>
+
+  <div *ngIf="sortedAppointments.length === 0" class="text-center py-10 text-gray-400">
+    <p>Nenhum agendamento encontrado.</p>
+  </div>
+
+  <div *ngFor="let apt of sortedAppointments" class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col gap-3">
+    <div class="flex justify-between items-start">
+      <div>
+        <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border {{ getStatusColor(apt.status) }}">
+          {{ apt.status }}
+        </span>
+        <h3 class="font-bold text-gray-800 mt-2 text-lg">{{ apt.clientName }}</h3>
+        <p class="text-gray-500 text-sm">{{ getServiceName(apt.serviceId) }}</p>
+      </div>
+      <div class="text-right">
+        <p class="font-bold text-pink-600">R$ {{ getServicePrice(apt.serviceId).toFixed(2) }}</p>
+        <div class="flex items-center gap-1 text-gray-400 text-xs mt-1 justify-end">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12,6 12,12 16,14"></polyline>
+          </svg>
+          <span>{{ formatDate(apt.date) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="isAdmin && apt.status === AppointmentStatus.SCHEDULED" class="flex gap-2 mt-2 pt-3 border-t border-gray-50">
+      <button
+        (click)="onUpdateStatus(apt.id, AppointmentStatus.COMPLETED)"
+        class="flex-1 bg-green-50 hover:bg-green-100 text-green-700 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22,4 12,14.01 9,11.01"></polyline>
+        </svg>
+        Concluir
+      </button>
+      <button
+        (click)="onUpdateStatus(apt.id, AppointmentStatus.CANCELLED)"
+        class="flex-1 bg-red-50 hover:bg-red-100 text-red-700 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M15 9l-6 6"></path>
+          <path d="M9 9l6 6"></path>
+        </svg>
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
