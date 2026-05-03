@@ -107,3 +107,7 @@ temp/
 
 # Angular
 /.angular/cache/
+
+# Backend local database
+/backend/appointments.db
+/backend/node_modules

@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpClientModule } from '@angular/common/http';
 import { v4 as uuidv4 } from 'uuid';
 import { AppointmentService } from './appointment.service';
 import { Appointment, AppointmentStatus } from './types';
@@ -16,6 +17,7 @@ import { LoginScreenComponent } from './login-screen/login-screen.component';
   standalone: true,
   imports: [
     CommonModule,
+    HttpClientModule,
     LayoutComponent,
     DashboardComponent,
     AppointmentListComponent,
@@ -66,6 +68,10 @@ export class AppComponent {
 
   handleUpdateStatus(id: string, status: AppointmentStatus) {
     this.appointmentService.updateStatus(id, status);
+  }
+
+  handleDeleteAppointment(id: string) {
+    this.appointmentService.deleteAppointment(id);
   }
 
   onOpenNewBooking() {

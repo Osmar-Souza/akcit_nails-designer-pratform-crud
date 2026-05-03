@@ -13,12 +13,20 @@ export class AppointmentListComponent {
   @Input() appointments!: Appointment[];
   @Input() services!: Service[];
   @Output() updateStatus = new EventEmitter<{id: string, status: AppointmentStatus}>();
+  @Output() deleteAppointment = new EventEmitter<string>();
   @Input() isAdmin!: boolean;
 
   AppointmentStatus = AppointmentStatus;
 
   get sortedAppointments(): Appointment[] {
-    return [...this.appointments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    let filtered = this.appointments;
+    
+    // Se não for admin, mostrar apenas agendamentos pendentes (não concluído nem cancelado)
+    if (!this.isAdmin) {
+      filtered = filtered.filter(a => a.status === AppointmentStatus.SCHEDULED);
+    }
+    
+    return [...filtered].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
 
   getServiceName(id: string): string {
@@ -49,5 +57,9 @@ export class AppointmentListComponent {
 
   onUpdateStatus(id: string, status: AppointmentStatus) {
     this.updateStatus.emit({ id, status });
+  }
+
+  onDeleteAppointment(id: string) {
+    this.deleteAppointment.emit(id);
   }
 }

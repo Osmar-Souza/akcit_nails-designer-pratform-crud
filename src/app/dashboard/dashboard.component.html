@@ -1,54 +1,93 @@
 <div class="space-y-6 animate-fade-in">
-  <div class="bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
-    <h2 class="text-sm font-medium opacity-90 mb-1">Faturamento Total (Realizado)</h2>
-    <div class="text-3xl font-bold">R$ {{ pastRevenue.toFixed(2) }}</div>
-    <div class="mt-4 pt-4 border-t border-white/20 flex justify-between items-center">
-      <div>
-        <p class="text-xs opacity-80">Previsão Futura</p>
-        <p class="text-lg font-semibold">R$ {{ futureRevenue.toFixed(2) }}</p>
+  <div class="grid gap-4 lg:grid-cols-3">
+    <div class="bg-gradient-to-r from-pink-500 to-purple-600 rounded-3xl p-6 text-white shadow-lg">
+      <h2 class="text-sm font-medium opacity-90 mb-1">Faturamento Realizado</h2>
+      <div class="text-3xl font-bold">R$ {{ pastRevenue.toFixed(2) }}</div>
+      <p class="text-sm opacity-80 mt-2">Valores de serviços já finalizados</p>
+    </div>
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+      <h3 class="text-gray-500 text-xs font-semibold uppercase mb-4">Agendamentos</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="rounded-2xl bg-pink-50 p-4">
+          <span class="text-3xl font-bold text-pink-700">{{ scheduledCount }}</span>
+          <p class="text-xs text-gray-500 mt-1">Agendados</p>
+        </div>
+        <div class="rounded-2xl bg-green-50 p-4">
+          <span class="text-3xl font-bold text-emerald-700">{{ completedCount }}</span>
+          <p class="text-xs text-gray-500 mt-1">Concluídos</p>
+        </div>
+        <div class="rounded-2xl bg-gray-50 p-4 col-span-2">
+          <span class="text-3xl font-bold text-gray-900">{{ totalAppointments }}</span>
+          <p class="text-xs text-gray-500 mt-1">Total de agendamentos</p>
+        </div>
       </div>
-      <div class="bg-white/20 p-2 rounded-lg">
-        <p class="text-xs font-bold">+{{ totalAppointments }} Agendas</p>
-      </div>
+    </div>
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+      <h3 class="text-gray-500 text-xs font-semibold uppercase mb-4">Previsão futura</h3>
+      <div class="text-3xl font-bold text-purple-600">R$ {{ futureRevenue.toFixed(2) }}</div>
+      <p class="text-sm opacity-80 mt-2">Receita esperada de agendamentos pendentes</p>
     </div>
   </div>
 
-  <div class="grid grid-cols-2 gap-4">
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-      <h3 class="text-gray-500 text-xs font-semibold uppercase mb-2">Balanço</h3>
-      <div class="h-32">
-        <!-- Placeholder for chart -->
-        <div class="flex items-end justify-around h-full">
-          <div *ngFor="let item of data" class="flex flex-col items-center">
-            <div [style.height.%]="(item.value / Math.max(...data.map(d => d.value))) * 100" [style.background-color]="item.color" class="w-8 rounded-t"></div>
-            <span class="text-xs mt-1">{{ item.name }}</span>
+  <div class="grid gap-4 xl:grid-cols-2">
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-semibold text-gray-900">Status dos Agendamentos</h3>
+          <p class="text-xs text-gray-500">Distribuição por status</p>
+        </div>
+        <span class="text-sm font-semibold text-gray-700">Total {{ totalAppointments }}</span>
+      </div>
+      <div class="grid gap-3">
+        <div *ngFor="let item of statusData" class="flex items-center justify-between rounded-2xl bg-gray-50 p-4">
+          <div class="flex items-center gap-3">
+            <span [style.background-color]="item.fill" class="w-3 h-3 rounded-full"></span>
+            <div>
+              <p class="text-sm font-medium text-gray-900">{{ item.name }}</p>
+              <p class="text-xs text-gray-500">{{ item.value }} agendamento(s)</p>
+            </div>
+          </div>
+          <span class="text-sm font-semibold text-gray-900">{{ item.value }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-semibold text-gray-900">Próximos Agendamentos</h3>
+          <p class="text-xs text-gray-500">Os próximos serviços agendados</p>
+        </div>
+        <span class="text-xs text-gray-500">Mostrando {{ upcomingAppointments.length }}</span>
+      </div>
+      <div class="space-y-3">
+        <div *ngIf="upcomingAppointments.length === 0" class="rounded-2xl bg-gray-50 p-5 text-center text-sm text-gray-500">
+          Nenhum agendamento futuro encontrado.
+        </div>
+        <div *ngFor="let appointment of upcomingAppointments" class="rounded-3xl border border-gray-100 p-4 shadow-sm">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-sm font-semibold text-gray-900">{{ appointment.clientName }}</p>
+              <p class="text-xs text-gray-500">{{ getServiceName(appointment.serviceId) }}</p>
+            </div>
+            <span class="text-xs font-semibold uppercase text-pink-600">{{ appointment.status }}</span>
+          </div>
+          <div class="mt-3 flex items-center justify-between text-sm text-gray-500">
+            <span>{{ formatDate(appointment.date) }}</span>
+            <span>R$ {{ getServicePrice(appointment.serviceId).toFixed(2) }}</span>
           </div>
         </div>
       </div>
     </div>
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-      <h3 class="text-gray-500 text-xs font-semibold uppercase mb-2">Status</h3>
-      <div class="h-32">
-        <!-- Placeholder for pie chart -->
-        <div class="flex flex-wrap justify-center items-center h-full">
-          <div *ngFor="let item of statusData" class="flex items-center mr-2 mb-2">
-            <div [style.background-color]="item.fill" class="w-3 h-3 rounded-full mr-1"></div>
-            <span class="text-xs">{{ item.name }}: {{ item.value }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
-  <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-    <h3 class="text-gray-800 font-semibold mb-3">Resumo Rápido</h3>
-    <div class="space-y-3">
-      <div *ngFor="let item of data" class="flex justify-between items-center text-sm">
-        <div class="flex items-center gap-2">
-          <div class="w-3 h-3 rounded-full" [style.background-color]="item.color"></div>
-          <span class="text-gray-600">{{ item.name }}</span>
-        </div>
-        <span class="font-bold text-gray-900">R$ {{ item.value.toFixed(2) }}</span>
+  <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+    <h3 class="font-semibold text-gray-900 mb-4">Receita por serviço concluído</h3>
+    <div class="grid gap-3 md:grid-cols-2">
+      <div *ngFor="let service of serviceRevenue" class="rounded-2xl bg-gray-50 p-4">
+        <p class="text-sm font-semibold text-gray-900">{{ service.service.name }}</p>
+        <p class="text-xs text-gray-500">Concluído</p>
+        <p class="mt-3 text-lg font-bold text-gray-900">R$ {{ service.revenue.toFixed(2) }}</p>
       </div>
     </div>
   </div>
