@@ -1,59 +1,72 @@
 # Akcit Nails Designer Platform CRUD
 
-Aplicação frontend em Angular para gerenciamento de agendamentos de um salão de beleza.
+Plataforma de agendamento para salão de beleza com frontend em Angular e backend em Express.js. O sistema oferece login por perfil, dashboard de métricas, CRUD de agendamentos e atualização em tempo real.
+
+## Descrição
+
+Este projeto é um MVP acadêmico para gerenciamento de agendamentos de salão. O frontend exibe um painel administrativo completo, enquanto o backend entrega as APIs REST e sincronização instantânea usando Server-Sent Events (SSE).
 
 ## Funcionalidades
 
-- ✅ Autenticação de tela de login com diferentes perfis (admin e cliente)
-- ✅ Dashboard com dados reais e atualização em tempo real via SSE
-- ✅ Listagem de agendamentos com filtros por perfil
-- ✅ Criação de novos agendamentos com validação
+- ✅ Login com perfis de admin e cliente
+- ✅ Dashboard com métricas reais
+- ✅ Atualização em tempo real via SSE
+- ✅ Listagem de agendamentos
+- ✅ Filtro por perfil de usuário
+- ✅ Criação de agendamentos
 - ✅ Exclusão instantânea de agendamentos
-- ✅ Atualização de status de agendamentos (Agendado → Concluído/Cancelado)
-- ✅ Metricas de faturamento (realizado e previsão futura)
-- ✅ Distribuição de status dos agendamentos
-- ✅ Lista de próximos agendamentos
+- ✅ Atualização de status (Agendado → Concluído / Cancelado)
+- ✅ Cálculo de faturamento realizado e previsão futura
 - ✅ Receita por serviço concluído
+- ✅ Próximos agendamentos ordenados por data
 - ✅ Layout responsivo e otimizado para desktop
-- 🔄 Componente de assistente de IA como base de extensão futura
+- 🔄 Assistente de IA placeholder para evolução futura
 
 ## Tecnologias utilizadas
 
 - Angular 21
 - TypeScript
 - HTML5 / CSS3
-- Tailwind CSS (configuração de estilos)
-- UUID para geração de identificadores
+- Tailwind CSS
+- RxJS
+- Express.js
+- Server-Sent Events (SSE)
+- UUID
 
 ## Como executar localmente
 
 1. Clone o repositório:
 
 ```bash
-git clone <URL_DO_REPOSITÓRIO>
+git clone https://github.com/Osmar-Souza/akcit_nails-designer-pratform-crud.git
 cd akcit_nails-designer-pratform-crud
 ```
 
-2. Instale as dependências:
+2. Instale as dependências do frontend:
 
 ```bash
 npm install
 ```
 
-3. Inicie o backend em outra janela de terminal:
+3. Instale as dependências do backend:
 
 ```bash
 npm run install:backend
+```
+
+4. Inicie o backend:
+
+```bash
 npm run start:backend
 ```
 
-4. Inicie a aplicação:
+5. Inicie o frontend em outra janela de terminal:
 
 ```bash
 npm start
 ```
 
-5. Abra no navegador:
+6. Acesse a aplicação:
 
 ```text
 http://localhost:4200
@@ -63,6 +76,46 @@ http://localhost:4200
 
 ```bash
 npm test
+```
+
+## Exemplo de uso
+
+### Criar agendamento
+
+```http
+POST /appointments
+Content-Type: application/json
+
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "clientName": "João Silva",
+  "serviceId": "1",
+  "date": "2026-05-10T14:00:00Z",
+  "status": "Agendado"
+}
+```
+
+### Atualizar status
+
+```http
+PATCH /appointments/123e4567-e89b-12d3-a456-426614174000/status
+Content-Type: application/json
+
+{
+  "status": "Concluído"
+}
+```
+
+### Deletar agendamento
+
+```http
+DELETE /appointments/123e4567-e89b-12d3-a456-426614174000
+```
+
+### Conectar SSE
+
+```http
+GET /stream
 ```
 
 ## Estrutura do projeto
@@ -82,71 +135,49 @@ src/
     types.ts
   index.html
   main.ts
-
 backend/
   server.js
   package.json
-
 angular.json
 package.json
 tsconfig.json
 tsconfig.app.json
 tsconfig.spec.json
-README.md
 ```
 
 ## Backend
 
-O projeto inclui um servidor Express.js com API REST para gerenciamento de agendamentos e atualização em tempo real:
+API REST em Express.js que gerencia os agendamentos e transmite atualizações em tempo real:
 
-- **GET /appointments**: Lista todos os agendamentos
-- **POST /appointments**: Cria um novo agendamento
-- **PATCH /appointments/:id/status**: Atualiza o status de um agendamento
-- **DELETE /appointments/:id**: Remove um agendamento
-- **GET /stream**: Endpoint SSE para atualizações em tempo real
+- **GET /appointments**: lista todos os agendamentos
+- **POST /appointments**: cria um novo agendamento
+- **PATCH /appointments/:id/status**: atualiza o status de um agendamento
+- **DELETE /appointments/:id**: remove um agendamento
+- **GET /stream**: envia atualizações via SSE
 
-O backend usa banco de dados em memória para desenvolvimento rápido. Todas as mudanças são transmitidas via SSE para sincronização instantânea entre clientes.
+O backend utiliza armazenamento em memória para facilitar o desenvolvimento rápido.
 
 ## Limitações
 
-- O backend usa banco de dados em memória (dados são perdidos ao reiniciar o servidor).
-- Autenticação é apenas de front-end (sem validação backend real).
-- O assistente de IA é um componente placeholder sem integração.
-- Sem paginação na lista de agendamentos (pode ficar lenta com muitos dados).
-- Sem suporte a múltiplos salões ou usuários persistentes.
+- Armazenamento em memória, então os dados são perdidos ao reiniciar o servidor
+- Autenticação simulada no frontend, sem validação real no backend
+- Assistente de IA sem integração com serviços externos
+- Falta paginação e filtros avançados para a lista de agendamentos
+- Sem suporte a múltiplos salões e usuários persistentes
 
 ## Próximos passos
 
-- Migrar para um banco de dados persistente (SQLite, PostgreSQL, MongoDB).
-- Implementar autenticação real com JWT no backend.
-- Adicionar confirmação antes de deletar agendamentos.
-- Conectar o assistente de IA a um serviço real (GenAI, OpenAI, etc.).
-- Implementar paginação e busca avançada de agendamentos.
-- Adicionar relatórios e exportação de dados (PDF, CSV).
-- Implementar notificações por email/SMS para agendamentos.
-- Suporte a múltiplos salões com gerenciamento de usuários.
-- Deploy em produção (Vercel, Heroku, etc.).
-
-## Recursos Técnicos
-
-### Atualização em Tempo Real
-
-A aplicação usa **Server-Sent Events (SSE)** para sincronização instantânea entre clientes:
-- Quando um agendamento é criado, deletado ou alterado, todos os clientes conectados recebem a atualização imediatamente
-- O dashboard reflete as mudanças sem necessidade de refresh
-- Implementado via RxJS BehaviorSubject e async pipe do Angular
-
-### Optimistic Updates
-
-As operações (criar, deletar, atualizar) são atualizadas imediatamente na UI local, enquanto a requisição backend é processada:
-- Melhor UX com feedback instantâneo
-- Fallback para dados anterior caso a requisição falhe
-
-### Filtros por Perfil
-
-- **Admin**: vê todos os agendamentos (agendados, concluídos, cancelados)
-- **Cliente**: vê apenas agendamentos pendentes de conclusão
+- Migrar para banco de dados persistente (SQLite, PostgreSQL, MongoDB)
+- Implementar autenticação real com JWT
+- Adicionar confirmação antes de deletar agendamentos
+- Conectar o assistente de IA a um serviço real (GenAI / OpenAI)
+- Implementar busca, filtros e paginação
+- Adicionar relatórios e exportação de dados (PDF / CSV)
+- Inserir notificações por email / SMS
+- Suporte a múltiplos salões e usuários
+- Deploy em produção (Vercel, Heroku, etc.)
 
 ## Licença
 
 Uso acadêmico e de estudo.
+
