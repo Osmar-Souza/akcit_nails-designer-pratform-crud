@@ -1,0 +1,14 @@
+{
+  "name": "akcit-backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "start:backend": "node server.js",
+    "install:backend": "npm install"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}
