@@ -4,7 +4,19 @@ import { BehaviorSubject, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Appointment, AppointmentStatus } from './types';
 
-const API_BASE_URL = 'http://localhost:3333';
+// Detecta a URL do backend dinamicamente
+const getApiUrl = () => {
+  // Em produção (Vercel), use a URL do Railway
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return window.location.origin.includes('localhost') 
+      ? 'http://localhost:3333'
+      : (window as any).__API_URL__ || 'https://seu-backend-railway.railway.app';
+  }
+  // Em desenvolvimento, use localhost
+  return 'http://localhost:3333';
+};
+
+const API_BASE_URL = getApiUrl();
 
 @Injectable({
   providedIn: 'root'
