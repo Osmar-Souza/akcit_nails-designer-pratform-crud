@@ -5,7 +5,8 @@ const { Pool } = require('pg');
 
 const app = express();
 const port = process.env.PORT || 3333;
-const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/akcit';
+const databaseUrl =
+  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/akcit';
 
 const pool = new Pool({
   connectionString: databaseUrl,
@@ -16,6 +17,16 @@ const sseClients = new Set();
 
 app.use(cors({ origin: true }));
 app.use(express.json());
+
+const appointmentSelect = `
+  id,
+  client_name AS "clientName",
+  service_id AS "serviceId",
+  date,
+  status,
+  notes,
+  created_at AS "createdAt"
+`;
 
 async function ensureSchema() {
   await pool.query(`
@@ -31,9 +42,19 @@ async function ensureSchema() {
   `);
 }
 
+async function getAppointments() {
+  const { rows } = await pool.query(`
+    SELECT ${appointmentSelect}
+    FROM appointments
+    ORDER BY date ASC
+  `);
+
+  return rows;
+}
+
 async function broadcastAppointments() {
   try {
-    const { rows: appointments } = await pool.query('SELECT * FROM appointments ORDER BY date ASC');
+    const appointments = await getAppointments();
     const payload = `data: ${JSON.stringify(appointments)}\n\n`;
     sseClients.forEach((res) => res.write(payload));
   } catch (error) {
@@ -43,8 +64,8 @@ async function broadcastAppointments() {
 
 app.get('/appointments', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM appointments ORDER BY date ASC');
-    res.json(rows);
+    const appointments = await getAppointments();
+    res.json(appointments);
   } catch (error) {
     console.error('Erro ao buscar agendamentos:', error);
     res.status(500).json({ error: 'Erro ao buscar agendamentos' });
@@ -60,9 +81,11 @@ app.post('/appointments', async (req, res) => {
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO appointments (id, client_name, service_id, date, status, notes)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
+      `
+      INSERT INTO appointments (id, client_name, service_id, date, status, notes)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING ${appointmentSelect}
+      `,
       [id, clientName, serviceId, new Date(date), status, notes || null]
     );
 
@@ -84,7 +107,12 @@ app.patch('/appointments/:id/status', async (req, res) => {
     }
 
     const { rows } = await pool.query(
-      `UPDATE appointments SET status = $1 WHERE id = $2 RETURNING *`,
+      `
+      UPDATE appointments
+      SET status = $1
+      WHERE id = $2
+      RETURNING ${appointmentSelect}
+      `,
       [status, id]
     );
 
@@ -103,8 +131,13 @@ app.patch('/appointments/:id/status', async (req, res) => {
 app.delete('/appointments/:id', async (req, res) => {
   try {
     const { id } = req.params;
+
     const { rows } = await pool.query(
-      `DELETE FROM appointments WHERE id = $1 RETURNING *`,
+      `
+      DELETE FROM appointments
+      WHERE id = $1
+      RETURNING ${appointmentSelect}
+      `,
       [id]
     );
 
@@ -127,7 +160,7 @@ app.get('/stream', async (req, res) => {
   res.flushHeaders();
 
   try {
-    const { rows: appointments } = await pool.query('SELECT * FROM appointments ORDER BY date ASC');
+    const appointments = await getAppointments();
     const initPayload = `data: ${JSON.stringify(appointments)}\n\n`;
     res.write(initPayload);
   } catch (error) {
