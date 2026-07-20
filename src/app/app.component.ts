@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { v4 as uuidv4 } from 'uuid';
 import { AppointmentService } from './appointment.service';
+import { AuthService } from './auth.service';
 import { Appointment, AppointmentStatus } from './types';
 import { AVAILABLE_SERVICES } from './constants';
 import { LayoutComponent } from './layout/layout.component';
@@ -35,20 +36,35 @@ export class AppComponent {
   isModalOpen = false;
   AVAILABLE_SERVICES = AVAILABLE_SERVICES;
 
-  constructor(public appointmentService: AppointmentService) {}
+  constructor(
+    public appointmentService: AppointmentService,
+    private authService: AuthService
+  ) {
+    this.isAuthenticated = this.authService.isAuthenticated;
+    this.isAdmin = this.authService.isAdmin;
+  }
 
   handleLogin(adminUser: boolean) {
-    this.isAdmin = adminUser;
-    this.isAuthenticated = true;
-    // If user is client, they cannot see dashboard, so force schedule tab
-    if (!adminUser) {
-      this.activeTab = 'schedule';
-    } else {
-      this.activeTab = 'dashboard';
-    }
+    const login$ = adminUser
+      ? this.authService.loginAsAdmin()
+      : this.authService.loginAsClient();
+
+    login$.subscribe({
+      next: () => {
+        this.isAuthenticated = true;
+        this.isAdmin = this.authService.isAdmin;
+        this.activeTab = adminUser ? 'dashboard' : 'schedule';
+      },
+      error: (error) => {
+        console.error('Falha ao autenticar:', error);
+        this.isAuthenticated = false;
+        this.isAdmin = false;
+      }
+    });
   }
 
   handleLogout() {
+    this.authService.logout();
     this.isAuthenticated = false;
     this.isAdmin = false;
     this.activeTab = 'dashboard';

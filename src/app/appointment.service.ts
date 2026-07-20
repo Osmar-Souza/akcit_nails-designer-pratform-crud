@@ -1,8 +1,9 @@
 ﻿import { Injectable, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, throwError } from 'rxjs';
+import { BehaviorSubject, throwError, distinctUntilChanged } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Appointment, AppointmentStatus } from './types';
+import { AuthService } from './auth.service';
 
 // Detecta a URL do backend dinamicamente
 const getApiUrl = () => {
@@ -26,13 +27,47 @@ export class AppointmentService {
   public appointments$ = this.appointmentsSubject.asObservable();
   private eventSource?: EventSource;
 
-  constructor(private http: HttpClient, private zone: NgZone) {
-    this.fetchAppointments();
-    this.initAppointmentStream();
+  constructor(
+    private http: HttpClient,
+    private zone: NgZone,
+    private authService: AuthService
+  ) {
+    this.authService.token$
+      .pipe(distinctUntilChanged())
+      .subscribe((token) => {
+        if (token) {
+          this.fetchAppointments();
+          this.initAppointmentStream();
+        } else {
+          this.closeAppointmentStream();
+          this.appointmentsSubject.next([]);
+        }
+      });
+  }
+
+  private get authHeaders() {
+    const token = this.authService.token;
+    return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  }
+
+  private getStreamUrl(): string {
+    const token = this.authService.token;
+    return token ? `${API_BASE_URL}/stream?token=${encodeURIComponent(token)}` : `${API_BASE_URL}/stream`;
+  }
+
+  private closeAppointmentStream(): void {
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = undefined;
+    }
   }
 
   private fetchAppointments(): void {
-    this.http.get<Appointment[]>(`${API_BASE_URL}/appointments`)
+    if (!this.authService.token) {
+      return;
+    }
+
+    this.http.get<Appointment[]>(`${API_BASE_URL}/appointments`, this.authHeaders)
       .pipe(catchError(this.handleError))
       .subscribe((appointments) => {
         this.appointmentsSubject.next(appointments);
@@ -44,7 +79,11 @@ export class AppointmentService {
       return;
     }
 
-    this.eventSource = new EventSource(`${API_BASE_URL}/stream`);
+    if (!this.authService.token) {
+      return;
+    }
+
+    this.eventSource = new EventSource(this.getStreamUrl());
 
     this.eventSource.onmessage = (event) => {
       this.zone.run(() => {
@@ -80,7 +119,7 @@ export class AppointmentService {
     const optimisticAppointments = [...previousAppointments, appointment];
     this.appointmentsSubject.next(optimisticAppointments);
 
-    this.http.post<Appointment>(`${API_BASE_URL}/appointments`, appointment)
+    this.http.post<Appointment>(`${API_BASE_URL}/appointments`, appointment, this.authHeaders)
       .pipe(catchError((error) => {
         console.error('Erro ao criar agendamento:', error);
         this.appointmentsSubject.next(previousAppointments);
@@ -99,7 +138,7 @@ export class AppointmentService {
     const newAppointments = previousAppointments.filter((apt) => apt.id !== id);
     this.appointmentsSubject.next(newAppointments);
 
-    this.http.delete(`${API_BASE_URL}/appointments/${id}`)
+    this.http.delete(`${API_BASE_URL}/appointments/${id}`, this.authHeaders)
       .pipe(catchError((error) => {
         console.error('Erro ao deletar agendamento:', error);
         this.appointmentsSubject.next(previousAppointments);
@@ -109,7 +148,7 @@ export class AppointmentService {
   }
 
   updateStatus(id: string, status: AppointmentStatus): void {
-    this.http.patch<Appointment>(`${API_BASE_URL}/appointments/${id}/status`, { status })
+    this.http.patch<Appointment>(`${API_BASE_URL}/appointments/${id}/status`, { status }, this.authHeaders)
       .pipe(catchError(this.handleError))
       .subscribe((updatedAppointment) => {
         const newAppointments = this.appointments.map((apt) =>

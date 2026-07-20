@@ -1,12 +1,14 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 
 const app = express();
 const port = process.env.PORT || 3333;
 const databaseUrl =
   process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/akcit';
+const JWT_SECRET = process.env.JWT_SECRET || 'akcit_dev_secret_2026';
 
 const pool = new Pool({
   connectionString: databaseUrl,
@@ -14,6 +16,55 @@ const pool = new Pool({
 });
 
 const sseClients = new Set();
+
+const USERS = [
+  { username: 'admin', password: 'admin123', role: 'admin' },
+  { username: 'client', password: 'client123', role: 'client' }
+];
+
+function generateToken(user) {
+  return jwt.sign(
+    { username: user.username, role: user.role },
+    JWT_SECRET,
+    { expiresIn: '4h' }
+  );
+}
+
+function getTokenFromRequest(req) {
+  const authorization = req.headers.authorization;
+  if (authorization && authorization.startsWith('Bearer ')) {
+    return authorization.slice(7);
+  }
+  if (req.query && req.query.token) {
+    return String(req.query.token);
+  }
+  return null;
+}
+
+function authenticateToken(req, res, next) {
+  const token = getTokenFromRequest(req);
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token não fornecido.' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (error, payload) => {
+    if (error) {
+      return res.status(401).json({ error: 'Token inválido.' });
+    }
+
+    req.user = payload;
+    next();
+  });
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Acesso negado. Requer administrador.' });
+  }
+
+  next();
+}
 
 app.use(cors({ origin: true }));
 app.use(express.json());
@@ -61,7 +112,7 @@ function getService(serviceId) {
   return SERVICES[String(serviceId)];
 }
 
-async function hasAppointmentConflict({ serviceId, date, ignoreAppointmentId = null }) {
+async function hasAppointmentConflict({ serviceId, date, ignoreAppointmentId = null, client = pool }) {
   const service = getService(serviceId);
 
   if (!service) {
@@ -76,7 +127,7 @@ async function hasAppointmentConflict({ serviceId, date, ignoreAppointmentId = n
 
   const newEnd = addMinutes(newStart, service.durationMin);
 
-  const { rows } = await pool.query(
+  const { rows } = await client.query(
     `
     SELECT id
     FROM appointments
@@ -126,7 +177,26 @@ async function broadcastAppointments() {
   }
 }
 
-app.get('/appointments', async (req, res) => {
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username e password são obrigatórios.' });
+  }
+
+  const user = USERS.find(
+    (candidate) => candidate.username === username && candidate.password === password
+  );
+
+  if (!user) {
+    return res.status(401).json({ error: 'Credenciais inválidas.' });
+  }
+
+  const token = generateToken(user);
+  res.json({ token, role: user.role });
+});
+
+app.get('/appointments', authenticateToken, async (req, res) => {
   try {
     const appointments = await getAppointments();
     res.json(appointments);
@@ -136,7 +206,7 @@ app.get('/appointments', async (req, res) => {
   }
 });
 
-app.get('/availability', async (req, res) => {
+app.get('/availability', authenticateToken, async (req, res) => {
   try {
     const { date, serviceId } = req.query;
 
@@ -191,12 +261,19 @@ app.get('/availability', async (req, res) => {
   }
 });
 
-app.post('/appointments', async (req, res) => {
+app.post('/appointments', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+
   try {
     const { id, clientName, serviceId, date, status, notes } = req.body;
 
     if (!id || !clientName || !serviceId || !date || !status) {
       return res.status(400).json({ error: 'Campos obrigatórios faltando.' });
+    }
+
+    const validStatuses = ['Agendado', 'Concluído', 'Cancelado'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Status inválido.' });
     }
 
     const service = getService(serviceId);
@@ -211,18 +288,22 @@ app.post('/appointments', async (req, res) => {
       return res.status(400).json({ error: 'Data inválida.' });
     }
 
+    await client.query('BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+
     const hasConflict = await hasAppointmentConflict({
       serviceId,
-      date: appointmentDate
+      date: appointmentDate,
+      client
     });
 
     if (hasConflict) {
+      await client.query('ROLLBACK');
       return res.status(409).json({
         error: 'Horário indisponível para este serviço.'
       });
     }
 
-    const { rows } = await pool.query(
+    const { rows } = await client.query(
       `
       INSERT INTO appointments (id, client_name, service_id, date, status, notes)
       VALUES ($1, $2, $3, $4, $5, $6)
@@ -231,21 +312,31 @@ app.post('/appointments', async (req, res) => {
       [id, clientName, serviceId, appointmentDate, status, notes || null]
     );
 
+    await client.query('COMMIT');
     await broadcastAppointments();
     res.status(201).json(rows[0]);
   } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('Erro ao criar agendamento:', error);
+
+    if (error && error.code === '40001') {
+      return res.status(409).json({ error: 'Conflito de concorrência. Tente novamente.' });
+    }
+
     res.status(500).json({ error: 'Erro ao criar agendamento' });
+  } finally {
+    client.release();
   }
 });
 
-app.patch('/appointments/:id/status', async (req, res) => {
+app.patch('/appointments/:id/status', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!status) {
-      return res.status(400).json({ error: 'Status é obrigatório.' });
+    const validStatuses = ['Agendado', 'Concluído', 'Cancelado'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Status inválido.' });
     }
 
     const { rows } = await pool.query(
@@ -270,7 +361,7 @@ app.patch('/appointments/:id/status', async (req, res) => {
   }
 });
 
-app.delete('/appointments/:id', async (req, res) => {
+app.delete('/appointments/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -295,7 +386,7 @@ app.delete('/appointments/:id', async (req, res) => {
   }
 });
 
-app.get('/stream', async (req, res) => {
+app.get('/stream', authenticateToken, async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');

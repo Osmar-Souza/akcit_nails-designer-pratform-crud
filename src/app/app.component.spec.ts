@@ -1,18 +1,51 @@
 import { AppComponent } from './app.component';
 import { AppointmentService } from './appointment.service';
 import { AppointmentStatus } from './types';
+import { of } from 'rxjs';
+
+class AuthServiceStub {
+  token = '';
+  role: 'admin' | 'client' | null = null;
+
+  get isAuthenticated() {
+    return !!this.token;
+  }
+
+  get isAdmin() {
+    return this.role === 'admin';
+  }
+
+  loginAsAdmin() {
+    this.role = 'admin';
+    this.token = 'fake-admin-token';
+    return of({ token: this.token, role: this.role });
+  }
+
+  loginAsClient() {
+    this.role = 'client';
+    this.token = 'fake-client-token';
+    return of({ token: this.token, role: this.role });
+  }
+
+  logout() {
+    this.role = null;
+    this.token = '';
+  }
+}
 
 describe('AppComponent', () => {
   let component: AppComponent;
   let appointmentService: jasmine.SpyObj<AppointmentService>;
+  let authService: AuthServiceStub;
 
   beforeEach(() => {
     appointmentService = jasmine.createSpyObj<AppointmentService>(
       'AppointmentService',
       ['addAppointment', 'updateStatus', 'deleteAppointment']
     );
+    authService = new AuthServiceStub();
 
-    component = new AppComponent(appointmentService);
+    component = new AppComponent(appointmentService, authService as any);
   });
 
   it('should create', () => {
