@@ -1,0 +1,10 @@
+flowchart LR
+    actor["Cliente ou administrador"]
+    frontend["Frontend web<br/>Angular 21"]
+    backend["API e autenticacao<br/>Express.js + JWT"]
+    database[("PostgreSQL<br/>agendamentos")]
+
+    actor --> frontend
+    frontend -->|"HTTP/JSON com Bearer JWT"| backend
+    frontend -->|"SSE /stream com token"| backend
+    backend -->|"SQL via pg"| database

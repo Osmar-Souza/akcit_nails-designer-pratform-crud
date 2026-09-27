@@ -1,0 +1,21 @@
+sequenceDiagram
+    actor Cliente
+    participant Frontend as Angular
+    participant API as Express API
+    participant DB as PostgreSQL
+    participant SSE as Clientes conectados por SSE
+
+    Cliente->>Frontend: Preenche nome, servico e horario
+    Frontend->>API: POST /appointments com Bearer JWT
+    API->>API: Valida token, campos, servico, data e status
+    API->>DB: Inicia transacao serializavel
+    API->>DB: Verifica conflito pela duracao do servico
+    alt Horario em conflito
+        API->>DB: Rollback
+        API-->>Frontend: 409 Horario indisponivel
+    else Horario disponivel
+        API->>DB: Insere agendamento e confirma transacao
+        API->>DB: Consulta agenda atualizada
+        API-->>SSE: Publica agenda atualizada
+        API-->>Frontend: 201 Agendamento criado
+    end
